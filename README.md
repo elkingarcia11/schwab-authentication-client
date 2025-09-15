@@ -77,14 +77,31 @@ A comprehensive Python module for handling Charles Schwab API authentication wit
 
 ### 3. Configure Environment Variables
 
-Create a `.env` file with your credentials:
+**IMPORTANT**: You must create a `.env` file in the main directory for the application to work properly.
 
-```env
-SCHWAB_APP_KEY=your_schwab_app_key
-SCHWAB_APP_SECRET=your_schwab_app_secret
-GCS_BUCKET_NAME=your_gcs_bucket_name
-GOOGLE_APPLICATION_CREDENTIALS=/path/to/your/service-account-key.json
-```
+1. **Copy the example file:**
+   ```bash
+   cp gcs-python-module/env.example .env
+   ```
+
+2. **Edit the `.env` file with your actual credentials:**
+   ```env
+   # Schwab API Configuration
+   SCHWAB_APP_KEY=your-actual-schwab-app-key
+   SCHWAB_APP_SECRET=your-actual-schwab-app-secret
+   
+   # Google Cloud Storage Configuration
+   GCS_BUCKET_NAME=your-actual-gcs-bucket-name
+   GOOGLE_APPLICATION_CREDENTIALS=service-account-credentials.json
+   ```
+
+3. **Replace the placeholder values:**
+   - `your-actual-schwab-app-key`: Your Schwab API App Key
+   - `your-actual-schwab-app-secret`: Your Schwab API App Secret  
+   - `your-actual-gcs-bucket-name`: Your Google Cloud Storage bucket name
+   - `service-account-credentials.json`: Path to your GCS service account key file (usually just the filename if it's in the same directory)
+
+**Note**: If you don't have a GCS bucket set up, you can leave `GCS_BUCKET_NAME` empty, but the cloud storage features won't work.
 
 ## Usage
 
@@ -380,13 +397,20 @@ The module includes comprehensive error handling for:
    - **Ensure**: Service account key file path is correct
    - **Test**: GCS connectivity and bucket access
 
-5. **Virtual Environment Issues**
+5. **Environment Variable Issues**
+
+   - **Missing .env file**: Create `.env` file by copying `gcs-python-module/env.example`
+   - **GCS_BUCKET_NAME is None**: Add your bucket name to the `.env` file
+   - **GOOGLE_APPLICATION_CREDENTIALS not found**: Ensure the path to your service account key is correct
+   - **SCHWAB credentials not loaded**: Verify your App Key and App Secret are correct in `.env`
+
+6. **Virtual Environment Issues**
 
    - **Ensure**: Virtual environment is activated before installing dependencies
    - **Fix**: Use `venv\Scripts\activate` on Windows instead of `source venv/bin/activate`
    - **Reinstall**: `pip install -r requirements.txt` if packages aren't found
 
-6. **Git Submodule Issues**
+7. **Git Submodule Issues**
    - **Initialize**: `git submodule init && git submodule update`
    - **Recursive**: `git submodule update --init --recursive`
    - **Verify**: `gcs-python-module/` directory exists and contains `gcs_client.py`
