@@ -337,6 +337,17 @@ import requests
 response = requests.get('https://api.schwabapi.com/v1/accounts', headers=headers)
 ```
 
+### Simple Integration (Recommended)
+
+For most use cases, you just need one line:
+
+```python
+from schwab_auth import SchwabAuth
+
+# Get a valid access token - that's it!
+access_token = SchwabAuth().get_valid_access_token(use_gcs_refresh_token=True)
+```
+
 ### Key Integration Benefits
 
 - **Automatic Token Management**: No need to handle token refresh manually
