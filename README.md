@@ -1,66 +1,62 @@
-# Schwab API Authenticator
+# Charles Schwab Authentication Module
 
-A Python class for handling Charles Schwab API authentication with fresh token generation every time and automatic cloud storage integration.
+A comprehensive Python module for handling Charles Schwab API authentication with OAuth 2.0 flow, automatic token management, and Google Cloud Storage integration.
 
 ## Features
 
 - 🔐 **OAuth 2.0 Authentication**: Complete implementation of Schwab API OAuth flow
-- 🔄 **Fresh Tokens Every Time**: Always gets fresh tokens when you run the program
-- 💾 **Token Persistence**: Saves refresh tokens to file for reference
-- ☁️ **Cloud Storage Integration**: Automatically uploads tokens to Google Cloud Storage
-- 🛡️ **Error Handling**: Robust error handling for API calls
-- 🎯 **Easy Integration**: Simple class-based design for easy integration into larger projects
-- ⚡ **Always Fresh**: Assumes you want fresh tokens every time you run it
+- 🔄 **Flexible Token Management**: Support for both fresh authentication and GCS-stored refresh tokens
+- 💾 **Token Persistence**: Saves refresh tokens locally and to Google Cloud Storage
+- ☁️ **Cloud Storage Integration**: Automatic token backup and retrieval from GCS
+- 🛡️ **Robust Error Handling**: Comprehensive error handling for all authentication scenarios
+- 🎯 **Easy Integration**: Simple class-based design for seamless integration into larger projects
+- ⚡ **Dual Mode Operation**: Fresh authentication or GCS-based token refresh
 - 🔧 **Modular Architecture**: Separate GCS module for cloud storage operations
 
 ## Prerequisites
 
-- Python 3.6+
+- Python 3.8+
 - Charles Schwab Developer Account
 - Registered Schwab API Application
 - Google Cloud Storage Account (for cloud token storage)
 
 ## Installation
 
-1. Clone this repository:
+1. **Clone the repository with submodules:**
 
-```bash
-git clone --recursive <repository-url>
-cd schwab-api-authenticator
-```
+   ```bash
+   git clone --recursive <repository-url>
+   cd charles-schwab-authentication-module
+   ```
 
-2. Create and activate a virtual environment (recommended):
+2. **Create and activate a virtual environment:**
 
-```bash
-# Create virtual environment
-python -m venv venv
+   ```bash
+   # Create virtual environment
+   python -m venv venv
 
-# Activate virtual environment
-# On macOS/Linux:
-source venv/bin/activate
+   # Activate virtual environment
+   # On macOS/Linux:
+   source venv/bin/activate
 
-# On Windows:
-# venv\Scripts\activate
-```
+   # On Windows:
+   venv\Scripts\activate
+   ```
 
-3. Install required dependencies:
+3. **Install required dependencies:**
 
-```bash
-# Ensure pip is up to date
-pip install --upgrade pip
+   ```bash
+   # Ensure pip is up to date
+   pip install --upgrade pip
 
-# Install dependencies
-pip install -r requirements.txt
-```
+   # Install dependencies
+   pip install -r requirements.txt
+   ```
 
-4. Create a `.env` file in the project root:
-
-```env
-SCHWAB_APP_KEY=your_app_key_here
-SCHWAB_APP_SECRET=your_app_secret_here
-GCS_BUCKET_NAME=your_gcs_bucket_name
-GOOGLE_APPLICATION_CREDENTIALS=/path/to/your/service-account-key.json
-```
+4. **Initialize submodules:**
+   ```bash
+   git submodule update --init --recursive
+   ```
 
 ## Setup
 
@@ -90,9 +86,9 @@ GCS_BUCKET_NAME=your_gcs_bucket_name
 GOOGLE_APPLICATION_CREDENTIALS=/path/to/your/service-account-key.json
 ```
 
-## How to Run
+## Usage
 
-### Method 1: Authentication and Token Upload
+### Method 1: Fresh Authentication (Interactive)
 
 Run the script to authenticate locally and upload refresh token to GCS:
 
@@ -111,7 +107,7 @@ This will:
 4. Display the access token for use in your applications
 5. **Automatically upload the refresh token to Google Cloud Storage**
 
-### Method 2: Get Access Token Using GCS Refresh Token
+### Method 2: GCS-Based Token Refresh (Automated)
 
 Get a new access token using the refresh token stored in Google Cloud Storage:
 
@@ -147,184 +143,117 @@ Access Token: eyJ0eXAiOiJKV1QiLCJ...
 Refresh Token: eyJ0eXAiOiJKV1QiLCJ...
 Refresh token saved to schwab_refresh_token.txt
 File schwab_refresh_token.txt uploaded to schwab_refresh_token.txt.
-✅ Tokens obtained successfully!
+✅ Tokens obtained and uploaded to GCS successfully!
 ```
 
-### Deactivating the Virtual Environment
+## API Reference
 
-When you're done working with the project, you can deactivate the virtual environment:
-
-```bash
-deactivate
-```
-
-## How It Works
-
-### Authentication Flow
-
-1. **Fresh Token Request**: Every time you run the program, it generates a new authorization URL
-2. **User Authorization**: User visits the URL, logs in, and authorizes the application
-3. **Code Exchange**: The authorization code is exchanged for access and refresh tokens
-4. **Token Storage**: Refresh token is saved to `schwab_refresh_token.txt`
-5. **Cloud Upload**: Refresh token is automatically uploaded to Google Cloud Storage
-6. **Access Token**: Fresh access token is generated and returned
-
-### Token Management
-
-The system always prompts for fresh token authentication every time you run it. This ensures you always have the most current tokens and eliminates any token expiration issues. Additionally, tokens are automatically backed up to Google Cloud Storage for secure storage and easy retrieval.
-
-## File Structure
-
-```
-schwab-api-authenticator/
-├── schwab_auth.py          # Main authentication class
-├── schwab_refresh_token.txt # Stored refresh token (auto-generated)
-├── .env                    # Environment variables (you create this)
-├── .env.example           # Example environment file
-├── requirements.txt       # Main project dependencies
-├── README.md              # This file
-└── gcs-python-module/     # Google Cloud Storage module
-    ├── gcs_client.py      # GCS client class
-    ├── requirements.txt   # GCS module dependencies
-    ├── env.example        # GCS environment example
-    ├── README.md          # GCS module documentation
-    └── tests/             # GCS module tests
-        ├── integration_test.py
-        └── README.md
-```
-
-## Class Methods
-
-### `SchwabAuth`
+### SchwabAuth Class
 
 #### `__init__()`
 
 Initializes the authenticator with credentials from environment variables.
 
-#### `get_valid_access_token()`
+**Environment Variables Required:**
 
-Main method to get fresh access tokens. Always prompts for new authentication.
+- `SCHWAB_APP_KEY`: Your Schwab application key
+- `SCHWAB_APP_SECRET`: Your Schwab application secret
+- `GCS_BUCKET_NAME`: Your Google Cloud Storage bucket name (optional)
+- `GOOGLE_APPLICATION_CREDENTIALS`: Path to your GCS service account key file (optional)
 
-#### `save_refresh_token(refresh_token)`
+#### `get_valid_access_token(use_gcs_refresh_token=False)`
 
-Saves refresh token to file for reference.
+Main method to get a valid access token.
 
-#### `get_authorization_url(app_key, redirect_uri)`
+**Parameters:**
 
-Generates the authorization URL for user login.
+- `use_gcs_refresh_token` (bool): If True, attempts to use GCS-stored refresh token first
 
-#### `get_tokens_from_code(authorization_code, app_key, app_secret, redirect_uri)`
+**Returns:**
 
-Exchanges authorization code for tokens.
+- `str`: Valid access token, or None if authentication fails
 
-#### `refresh_access_token(refresh_token, app_key, app_secret)`
+**Example:**
 
-Refreshes access token using refresh token.
+```python
+auth = SchwabAuth()
+
+# Fresh authentication (interactive)
+access_token = auth.get_valid_access_token()
+
+# Use GCS refresh token (automated)
+access_token = auth.get_valid_access_token(use_gcs_refresh_token=True)
+```
 
 #### `automated_token_management()`
 
 Handles the complete fresh token generation workflow.
 
-### `GCSClient` (from gcs-python-module)
+**Returns:**
 
-The GCS client provides comprehensive Google Cloud Storage operations:
+- `str`: Refresh token, or None if authentication fails
 
-- `upload_file(bucket_name, source_file_name, destination_blob_name)` - Upload files to GCS
-- `download_file(bucket_name, source_blob_name, destination_file_name)` - Download files from GCS
-- `list_files(bucket_name, prefix="")` - List files in a bucket
-- `get_file_metadata(bucket_name, blob_name)` - Get file metadata
-- `delete_file(bucket_name, blob_name)` - Delete files from GCS
-- `create_bucket(bucket_name)` - Create new buckets
-- `delete_bucket(bucket_name)` - Delete buckets
-- `list_buckets()` - List all buckets
-- `bucket_exists(bucket_name)` - Check if bucket exists
+**Example:**
 
-## Environment Variables
+```python
+auth = SchwabAuth()
+refresh_token = auth.automated_token_management()
+```
 
-| Variable                         | Description                               | Required |
-| -------------------------------- | ----------------------------------------- | -------- |
-| `SCHWAB_APP_KEY`                 | Your Schwab application key               | Yes      |
-| `SCHWAB_APP_SECRET`              | Your Schwab application secret            | Yes      |
-| `GCS_BUCKET_NAME`                | Your Google Cloud Storage bucket name     | Yes      |
-| `GOOGLE_APPLICATION_CREDENTIALS` | Path to your GCS service account key file | Yes      |
+#### `refresh_access_token(refresh_token, app_key, app_secret)`
 
-## Error Handling
+Refreshes access token using refresh token.
 
-The class includes comprehensive error handling for:
+**Parameters:**
 
-- Missing environment variables
-- API request failures
-- Invalid authorization codes
-- Token refresh failures
-- File I/O errors
-- Google Cloud Storage operation failures
+- `refresh_token` (str): The refresh token to use
+- `app_key` (str): Your Schwab application key
+- `app_secret` (str): Your Schwab application secret
 
-## Security Notes
+**Returns:**
 
-- Never commit your `.env` file to version control
-- Keep your App Key and App Secret secure
-- The refresh token file contains sensitive data - protect it accordingly
-- Use HTTPS in production environments
-- Store your Google Cloud service account key securely
-- Consider using Google Cloud Secret Manager for production deployments
+- `str`: New access token, or None if refresh fails
 
-## Troubleshooting
+#### `save_refresh_token(refresh_token)`
 
-### Common Issues
+Saves refresh token to local file.
 
-1. **"No valid refresh token available"**
+**Parameters:**
 
-   - Solution: This shouldn't happen as the program always gets fresh tokens, but if it does, just run the program again
+- `refresh_token` (str): The refresh token to save
 
-2. **"Error getting tokens"**
+#### `load_refresh_token()`
 
-   - Check your App Key and App Secret
-   - Ensure the redirect URI matches your app configuration
-   - Verify the authorization code is complete and unmodified
+Loads refresh token from local file.
 
-3. **"Failed to get access token"**
+**Returns:**
 
-   - Try running the program again to get fresh tokens
-   - Check your internet connection and API credentials
+- `str`: Refresh token if found, None otherwise
 
-4. **Google Cloud Storage Errors**
+#### `upload_refresh_token_to_gcs()`
 
-   - Verify your service account has the correct permissions
-   - Check that the bucket name is correct
-   - Ensure the service account key file path is correct
-   - Verify the bucket exists and is accessible
+Uploads the local refresh token file to Google Cloud Storage.
 
-5. **Virtual Environment Issues**
+#### `download_refresh_token_from_gcs()`
 
-   - Make sure you've activated the virtual environment before installing dependencies
-   - If you see "command not found" errors, ensure the virtual environment is activated
-   - If packages aren't found, try reinstalling: `pip install -r requirements.txt`
-   - On Windows, use `venv\Scripts\activate` instead of `source venv/bin/activate`
+Downloads refresh token from Google Cloud Storage to local file.
 
-6. **Git Submodule Issues**
-   - If you see "No module named 'gcs_client'" errors, ensure submodules are initialized
-   - Run `git submodule init && git submodule update` to initialize submodules
-   - If submodules are still missing, try `git submodule update --init --recursive`
-   - Check that the `gcs-python-module/` directory exists and contains `gcs_client.py`
+**Returns:**
 
-### Debug Mode
-
-For debugging, you can add print statements or modify the error messages in the class methods.
+- `str`: Refresh token if download successful, None otherwise
 
 ## Integration Examples
 
-### Using the Authenticator in Your Own Modules
-
-The `SchwabAuth` class is designed to be easily integrated into other modules:
+### Basic Integration
 
 ```python
 from schwab_auth import SchwabAuth
 
 # Initialize the authenticator
-schwab_auth = SchwabAuth()
+auth = SchwabAuth()
 
 # Get access token (automatically uses GCS if available)
-access_token = schwab_auth.get_valid_access_token(use_gcs_refresh_token=True)
+access_token = auth.get_valid_access_token(use_gcs_refresh_token=True)
 
 # Use the token for API calls
 headers = {
@@ -337,23 +266,145 @@ import requests
 response = requests.get('https://api.schwabapi.com/v1/accounts', headers=headers)
 ```
 
-### Simple Integration (Recommended)
-
-For most use cases, you just need one line:
+### Integration with Streaming Client
 
 ```python
 from schwab_auth import SchwabAuth
 
-# Get a valid access token - that's it!
-access_token = SchwabAuth().get_valid_access_token(use_gcs_refresh_token=True)
+# In your streaming client
+auth = SchwabAuth()
+access_token = auth.get_valid_access_token(use_gcs_refresh_token=True)
+
+# Use token for WebSocket authentication
+streaming_client.login_with_token(access_token)
 ```
 
-### Key Integration Benefits
+### Automated Script Integration
 
-- **Automatic Token Management**: No need to handle token refresh manually
-- **GCS Integration**: Seamlessly uses cloud-stored refresh tokens
-- **Fallback Authentication**: Gracefully falls back to local authentication if needed
-- **Error Handling**: Built-in error handling for authentication failures
+```python
+from schwab_auth import SchwabAuth
+import time
+
+def get_schwab_data():
+    auth = SchwabAuth()
+
+    # Try GCS first, fall back to fresh auth if needed
+    access_token = auth.get_valid_access_token(use_gcs_refresh_token=True)
+
+    if not access_token:
+        print("GCS token failed, getting fresh authentication...")
+        access_token = auth.get_valid_access_token(use_gcs_refresh_token=False)
+
+    return access_token
+
+# Use in automated scripts
+access_token = get_schwab_data()
+```
+
+## File Structure
+
+```
+charles-schwab-authentication-module/
+├── schwab_auth.py                    # Main authentication class
+├── schwab_refresh_token.txt          # Stored refresh token (auto-generated)
+├── .env                              # Environment variables (you create this)
+├── requirements.txt                  # Python dependencies
+├── README.md                         # This file
+├── .gitmodules                       # Git submodule configuration
+└── gcs-python-module/                # Google Cloud Storage module
+    ├── gcs_client.py                 # GCS client class
+    ├── requirements.txt              # GCS module dependencies
+    ├── README.md                     # GCS module documentation
+    └── tests/                        # GCS module tests
+        ├── integration_test.py
+        └── README.md
+```
+
+## Environment Variables
+
+| Variable                         | Description                               | Required | Default |
+| -------------------------------- | ----------------------------------------- | -------- | ------- |
+| `SCHWAB_APP_KEY`                 | Your Schwab application key               | Yes      | -       |
+| `SCHWAB_APP_SECRET`              | Your Schwab application secret            | Yes      | -       |
+| `GCS_BUCKET_NAME`                | Your Google Cloud Storage bucket name     | No       | -       |
+| `GOOGLE_APPLICATION_CREDENTIALS` | Path to your GCS service account key file | No       | -       |
+
+## Error Handling
+
+The module includes comprehensive error handling for:
+
+- Missing environment variables
+- API request failures
+- Invalid authorization codes
+- Token refresh failures
+- File I/O errors
+- Google Cloud Storage operation failures
+- Network connectivity issues
+- Authentication flow interruptions
+
+## Security Notes
+
+- **Never commit your `.env` file** to version control
+- **Keep your App Key and App Secret secure**
+- **The refresh token file contains sensitive data** - protect it accordingly
+- **Use HTTPS in production environments**
+- **Store your Google Cloud service account key securely**
+- **Consider using Google Cloud Secret Manager** for production deployments
+- **Rotate credentials regularly** for enhanced security
+
+## Troubleshooting
+
+### Common Issues
+
+1. **"No valid refresh token available"**
+
+   - **Solution**: Run the program again to get fresh tokens
+   - **Check**: Ensure GCS bucket exists and is accessible
+
+2. **"Error getting tokens"**
+
+   - **Check**: Your App Key and App Secret are correct
+   - **Verify**: Redirect URI matches your app configuration
+   - **Ensure**: Authorization code is complete and unmodified
+
+3. **"Failed to get access token"**
+
+   - **Try**: Running the program again to get fresh tokens
+   - **Check**: Internet connection and API credentials
+   - **Verify**: Refresh token hasn't expired
+
+4. **Google Cloud Storage Errors**
+
+   - **Verify**: Service account has correct permissions
+   - **Check**: Bucket name is correct and exists
+   - **Ensure**: Service account key file path is correct
+   - **Test**: GCS connectivity and bucket access
+
+5. **Virtual Environment Issues**
+
+   - **Ensure**: Virtual environment is activated before installing dependencies
+   - **Fix**: Use `venv\Scripts\activate` on Windows instead of `source venv/bin/activate`
+   - **Reinstall**: `pip install -r requirements.txt` if packages aren't found
+
+6. **Git Submodule Issues**
+   - **Initialize**: `git submodule init && git submodule update`
+   - **Recursive**: `git submodule update --init --recursive`
+   - **Verify**: `gcs-python-module/` directory exists and contains `gcs_client.py`
+
+### Debug Mode
+
+For debugging, you can add print statements or modify the error messages in the class methods:
+
+```python
+# Enable debug output
+import logging
+logging.basicConfig(level=logging.DEBUG)
+
+# Or add debug prints
+auth = SchwabAuth()
+print(f"App Key: {auth.APP_KEY[:10]}...")
+print(f"GCS Bucket: {auth.GCS_BUCKET_NAME}")
+```
 
 ## Google Cloud Storage Module
 
@@ -366,6 +417,14 @@ The project includes a comprehensive Google Cloud Storage module (`gcs-python-mo
 - **Testing**: Integration tests for all GCS operations
 
 See the [gcs-python-module/README.md](gcs-python-module/README.md) for detailed documentation on the GCS client functionality.
+
+## Testing
+
+Run tests with pytest:
+
+```bash
+pytest tests/
+```
 
 ## Contributing
 
@@ -381,7 +440,7 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ## Disclaimer
 
-This tool is for educational and development purposes. Always follow Charles Schwab's API terms of service and rate limiting guidelines.
+This tool is for educational and development purposes. Always follow Charles Schwab's API terms of service and rate limiting guidelines. The tool is not intended for production trading without proper testing and validation.
 
 ## Support
 
@@ -390,8 +449,16 @@ For issues related to:
 - **Schwab API**: Contact Charles Schwab Developer Support
 - **Google Cloud Storage**: Check the [GCS module documentation](gcs-python-module/README.md)
 - **This Tool**: Open an issue in this repository
+- **Integration**: Check the parent project documentation
 
 ## Changelog
+
+### v2.1.0
+
+- **Enhanced GCS Integration**: Improved token management with fallback options
+- **Better Error Handling**: More comprehensive error scenarios and recovery
+- **Updated Documentation**: Comprehensive README with integration examples
+- **Python 3.8+ Support**: Updated minimum Python version requirement
 
 ### v2.0.0
 
@@ -403,7 +470,7 @@ For issues related to:
 
 ### v1.0.0
 
-- Initial release with class-based architecture
-- Always gets fresh tokens on every run
-- Token persistence for reference
-- Comprehensive error handling
+- **Initial Release**: Class-based architecture
+- **Fresh Token Generation**: Always gets fresh tokens on every run
+- **Token Persistence**: Saves refresh tokens for reference
+- **Comprehensive Error Handling**: Robust error handling for API calls

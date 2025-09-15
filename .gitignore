@@ -2,4 +2,5 @@
 schwab_refresh_token.txt
 .DS_Store
 venv/
+__pycache__/
 service-account-credentials.json
