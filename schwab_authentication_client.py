@@ -1,5 +1,7 @@
 import base64
+import json
 import os
+import time
 import urllib.parse
 import requests
 import argparse
@@ -70,7 +72,11 @@ class SchwabAuthenticationClient:
             success = self.gcs_client.download_file(self.GCS_BUCKET_NAME, self.ACCESS_TOKEN_FILE, self.ACCESS_TOKEN_FILE)
             if success:
                 print(f"Downloaded access token to {self.ACCESS_TOKEN_FILE}")
-                return self.load_access_token()
+                access_token = self.load_access_token()
+                if self.is_access_token_valid(access_token):
+                    return access_token
+                print("Downloaded access token is expired or invalid.")
+                return None
             else:
                 print("Failed to download access token from GCS.")
         return None
@@ -91,9 +97,36 @@ class SchwabAuthenticationClient:
 
         return None
 
-    def is_access_token_valid(self, access_token):
-        """Basic validation hook for access tokens."""
-        return bool(access_token)
+    def is_access_token_valid(self, access_token, buffer_seconds=60):
+        """Validate access token by inspecting its expiry when possible."""
+        if not access_token:
+            return False
+
+        parts = access_token.split('.')
+        if len(parts) < 2:
+            # Token not in JWT format; assume non-empty token is valid.
+            return True
+
+        payload_segment = parts[1]
+        padding = '=' * (-len(payload_segment) % 4)
+
+        try:
+            decoded_payload = base64.urlsafe_b64decode(payload_segment + padding)
+            payload = json.loads(decoded_payload.decode('utf-8'))
+        except (ValueError, json.JSONDecodeError):
+            print("Unable to decode access token payload; treating token as invalid.")
+            return False
+
+        exp_timestamp = payload.get('exp')
+        if exp_timestamp is None:
+            # Missing exp claim; can't verify, assume valid.
+            return True
+
+        current_time = int(time.time())
+        is_valid = exp_timestamp - buffer_seconds > current_time
+        if not is_valid:
+            print("Access token expired or near expiry.")
+        return is_valid
 
     def download_refresh_token_from_gcs(self):
         if self.gcs_client and self.GCS_BUCKET_NAME:

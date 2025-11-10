@@ -5,9 +5,9 @@ A comprehensive Python module for handling Charles Schwab API authentication wit
 ## Features
 
 - 🔐 **OAuth 2.0 Authentication**: Complete implementation of Schwab API OAuth flow
-- 🔄 **Flexible Token Management**: Support for both fresh authentication and GCS-stored refresh tokens
-- 💾 **Token Persistence**: Saves refresh tokens locally and to Google Cloud Storage
-- ☁️ **Cloud Storage Integration**: Automatic token backup and retrieval from GCS
+- 🔄 **Flexible Token Management**: Support for fresh authentication and GCS-stored tokens
+- 💾 **Token Persistence**: Saves access and refresh tokens locally and (optionally) to Google Cloud Storage
+- ☁️ **Cloud Storage Integration**: Automatic token backup, retrieval, and validation from GCS
 - 🛡️ **Robust Error Handling**: Comprehensive error handling for all authentication scenarios
 - 🎯 **Easy Integration**: Simple class-based design for seamless integration into larger projects
 - ⚡ **Dual Mode Operation**: Fresh authentication or GCS-based token refresh
@@ -80,16 +80,18 @@ A comprehensive Python module for handling Charles Schwab API authentication wit
 **IMPORTANT**: You must create a `.env` file in the main directory for the application to work properly.
 
 1. **Copy the example file:**
+
    ```bash
    cp gcs-python-module/env.example .env
    ```
 
 2. **Edit the `.env` file with your actual credentials:**
+
    ```env
    # Schwab API Configuration
    SCHWAB_APP_KEY=your-actual-schwab-app-key
    SCHWAB_APP_SECRET=your-actual-schwab-app-secret
-   
+
    # Google Cloud Storage Configuration
    GCS_BUCKET_NAME=your-actual-gcs-bucket-name
    GOOGLE_APPLICATION_CREDENTIALS=service-account-credentials.json
@@ -97,7 +99,7 @@ A comprehensive Python module for handling Charles Schwab API authentication wit
 
 3. **Replace the placeholder values:**
    - `your-actual-schwab-app-key`: Your Schwab API App Key
-   - `your-actual-schwab-app-secret`: Your Schwab API App Secret  
+   - `your-actual-schwab-app-secret`: Your Schwab API App Secret
    - `your-actual-gcs-bucket-name`: Your Google Cloud Storage bucket name
    - `service-account-credentials.json`: Path to your GCS service account key file (usually just the filename if it's in the same directory)
 
@@ -110,10 +112,10 @@ A comprehensive Python module for handling Charles Schwab API authentication wit
 Run the script to authenticate locally and upload refresh token to GCS:
 
 ```bash
-# Authenticate locally and upload refresh token to GCS
-python schwab_auth.py --authenticate
+# Authenticate interactively, cache tokens locally, and push them to GCS
+python schwab_authentication_client.py --authenticate
 # or simply (default behavior)
-python schwab_auth.py
+python schwab_authentication_client.py
 ```
 
 This will:
@@ -121,23 +123,25 @@ This will:
 1. Prompt you to visit the authorization URL
 2. Ask you to paste the redirect URL after authorization
 3. Generate fresh access and refresh tokens
-4. Display the access token for use in your applications
-5. **Automatically upload the refresh token to Google Cloud Storage**
+4. Persist both tokens to local files (`schwab_access_token.txt`, `schwab_refresh_token.txt`)
+5. Upload both token files to Google Cloud Storage (when configured)
 
 ### Method 2: GCS-Based Token Refresh (Automated)
 
 Get a new access token using the refresh token stored in Google Cloud Storage:
 
 ```bash
-python schwab_auth.py --get-access-token
+python schwab_authentication_client.py --get-access-token
 ```
 
 This will:
 
-1. Download the refresh token from Google Cloud Storage (if not present locally)
-2. Use the refresh token to get a new access token
-3. Display the access token without requiring user interaction
-4. Perfect for automated scripts and services
+1. Try the cached access token stored locally
+2. Fall back to the access token cached in Google Cloud Storage
+3. Refresh the access token using a local refresh token
+4. Refresh using a GCS refresh token if the local copy is missing or invalid
+5. Run the OAuth workflow if no refresh tokens are available
+6. Perfect for automated scripts and services that need reliable token rotation
 
 ### Expected Output
 
@@ -165,7 +169,7 @@ File schwab_refresh_token.txt uploaded to schwab_refresh_token.txt.
 
 ## API Reference
 
-### SchwabAuth Class
+### `SchwabAuthenticationClient` Class
 
 #### `__init__()`
 
@@ -193,14 +197,25 @@ Main method to get a valid access token.
 **Example:**
 
 ```python
-auth = SchwabAuth()
+from schwab_authentication_client import SchwabAuthenticationClient
 
-# Fresh authentication (interactive)
+auth = SchwabAuthenticationClient()
+
+# Unified workflow (automatically handles cache → GCS → refresh → OAuth)
 access_token = auth.get_valid_access_token()
-
-# Use GCS refresh token (automated)
-access_token = auth.get_valid_access_token(use_gcs_refresh_token=True)
 ```
+
+#### `get_valid_refresh_token(include_oauth=True)`
+
+Retrieves a refresh token by checking local storage first, then Google Cloud Storage, and optionally triggering the OAuth workflow.
+
+#### `get_latest_access_token()`
+
+Convenience wrapper around `get_valid_access_token()` for backwards compatibility.
+
+#### `save_access_token(access_token)` / `load_access_token()`
+
+Persists and retrieves the cached access token file.
 
 #### `automated_token_management()`
 
@@ -264,13 +279,12 @@ Downloads refresh token from Google Cloud Storage to local file.
 ### Basic Integration
 
 ```python
-from schwab_auth import SchwabAuth
+from schwab_authentication_client import SchwabAuthenticationClient
 
-# Initialize the authenticator
-auth = SchwabAuth()
+auth = SchwabAuthenticationClient()
 
-# Get access token (automatically uses GCS if available)
-access_token = auth.get_valid_access_token(use_gcs_refresh_token=True)
+# Unified token retrieval (local cache → GCS cache → refresh → OAuth)
+access_token = auth.get_valid_access_token()
 
 # Use the token for API calls
 headers = {
@@ -286,11 +300,10 @@ response = requests.get('https://api.schwabapi.com/v1/accounts', headers=headers
 ### Integration with Streaming Client
 
 ```python
-from schwab_auth import SchwabAuth
+from schwab_authentication_client import SchwabAuthenticationClient
 
-# In your streaming client
-auth = SchwabAuth()
-access_token = auth.get_valid_access_token(use_gcs_refresh_token=True)
+auth = SchwabAuthenticationClient()
+access_token = auth.get_valid_access_token()
 
 # Use token for WebSocket authentication
 streaming_client.login_with_token(access_token)
@@ -299,18 +312,12 @@ streaming_client.login_with_token(access_token)
 ### Automated Script Integration
 
 ```python
-from schwab_auth import SchwabAuth
+from schwab_authentication_client import SchwabAuthenticationClient
 import time
 
 def get_schwab_data():
-    auth = SchwabAuth()
-
-    # Try GCS first, fall back to fresh auth if needed
-    access_token = auth.get_valid_access_token(use_gcs_refresh_token=True)
-
-    if not access_token:
-        print("GCS token failed, getting fresh authentication...")
-        access_token = auth.get_valid_access_token(use_gcs_refresh_token=False)
+    auth = SchwabAuthenticationClient()
+    access_token = auth.get_valid_access_token()
 
     return access_token
 
@@ -322,14 +329,15 @@ access_token = get_schwab_data()
 
 ```
 charles-schwab-authentication-module/
-├── schwab_auth.py                    # Main authentication class
+├── schwab_authentication_client.py   # Main authentication client
+├── schwab_access_token.txt           # Stored access token (auto-generated)
 ├── schwab_refresh_token.txt          # Stored refresh token (auto-generated)
 ├── .env                              # Environment variables (you create this)
 ├── requirements.txt                  # Python dependencies
 ├── README.md                         # This file
 ├── .gitmodules                       # Git submodule configuration
-└── gcs-python-module/                # Google Cloud Storage module
-    ├── gcs_client.py                 # GCS client class
+└── google-cloud-storage-client/      # Google Cloud Storage module
+    ├── google_cloud_storage_client.py  # GCS client class
     ├── requirements.txt              # GCS module dependencies
     ├── README.md                     # GCS module documentation
     └── tests/                        # GCS module tests
